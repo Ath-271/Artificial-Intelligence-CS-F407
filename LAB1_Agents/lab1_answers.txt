@@ -1,0 +1,50 @@
+Lab 1 - Goal-Based Agent 
+=============================================================
+Why is this an example of a goal-based agent rather than a simple
+reflex agent?
+A simple reflex agent selects its next action from only the current
+percept (e.g. "if there is a wall ahead, turn"), with no memory and no
+notion of success. This agent instead maintains an explicit model of the
+environment and an explicit goal state, and it evaluates sequences of
+actions against that goal before acting - which is precisely what makes
+it goal-based rather than purely reactive.
+
+TASK 2 - DESIGNING THE AGENT
+-----------------------------
+Environment: the warehouse grid - shelving units (obstacles) and free
+space, fixed and fully known.
+
+Current state: the vehicle's current (row, col) position in the grid.
+
+Goal: the dispatch position G.
+
+Available actions: Up, Down, Left, Right.
+
+Decision-making component: a search procedure (breadth-first search)
+that, given the current state, the goal, and the environment model,
+selects the sequence of actions predicted to reach the goal without
+colliding with an obstacle.
+
+Block diagram (described):
+
+  [Environment] -> [Agent state] -> [Decision-making] -> [Actuator]
+   (grid map)       (position)      (search vs. goal)    (move)
+        ^                                                    |
+        |____________________________________________________|
+                 action changes the agent's position
+
+The agent reads the environment to know what the grid looks like,
+maintains its own state (position), passes state and goal to the
+decision-making component to plan a path, and the actuator carries out
+each action - which in turn changes the agent's position within the
+environment, closing the loop.
+
+Why do you think the LLM selected this algorithm?
+
+Because every move in the warehouse has equal cost (one grid square), so
+BFS - which explores the grid level by level - is both complete (it will
+find a path if one exists) and guaranteed to return a shortest path. It
+is also simpler to implement and explain than an informed algorithm such
+as A*, which would additionally require a heuristic function; since the
+grid is small and all costs are uniform, that added complexity buys no
+benefit here.
