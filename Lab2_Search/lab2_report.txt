@@ -1,0 +1,348 @@
+Lab 2 - Search and A* (Warehouse Robot Navigation)
+=====================================================
+1. FORMULATION OF THE SEARCH PROBLEM
+--------------------------------------
+P = (S, A, T, s0, G, c)
+
+State (S)       : a robot position (row, col) on the grid. The state
+                  does not need to include the whole path travelled so
+                  far - the grid is static, so the robot's current cell
+                  alone is enough to determine what it can do next and
+                  whether it has reached the goal.
+Actions (A)     : {Up, Down, Left, Right}
+Transition (T)  : T((r, c), action) -> (r', c') if the destination cell
+                  is inside the grid and is not an obstacle; otherwise
+                  the action is not available from that state.
+Initial state   : the cell marked S
+Goal (G)        : the single cell marked G (goal test: state == G)
+Cost (c)        : every move costs 1 (uniform-cost grid)
+
+(a) What information is necessary to specify a state?
+Only the robot's (row, col) coordinates - the grid itself is fixed and
+known in advance, so position alone determines available actions and
+whether the goal has been reached.
+
+(b) What makes an action invalid?
+An action is invalid if it would move the robot outside the grid bounds,
+or onto a cell containing '#' (an obstacle).
+
+(c) Is this a deterministic search problem?
+Yes - from a given state, a given action always leads to exactly one
+resulting state (or is simply unavailable).
+
+(d) What would constitute a solution?
+A sequence of actions, starting at s0, that obeys T at every step and
+ends in a state satisfying the goal test (state == G).
+
+
+2. DESIGN OF THE AGENT
+-------------------------
+1. State representation: a (row, col) tuple.
+2. Warehouse representation: a list of equal-length strings, one per
+   row, using '#' for obstacles, '.' for free cells, 'S' for start,
+   'G' for goal.
+3. Valid actions: computed by a neighbours() function that checks grid
+   bounds and that the destination cell is not '#'.
+4. Goal recognition: current_state == goal.
+5. Frontier contents:
+   - BFS: a FIFO queue of states (deque).
+   - A*: a min-heap of (f(n), tie-breaker, state) tuples, ordered by
+     f(n) = g(n) + h(n).
+6. Path reconstruction: a came_from dictionary mapping each visited
+   state to (previous_state, action_taken), walked backwards from the
+   goal to the start once the goal is reached.
+
+Reported at termination (minimum, as required):
+- whether a solution was found
+- the solution path
+- the path length
+- the number of states expanded
+
+3. THE FINAL PYTHON PROGRAM
+------------------------------
+See the accompanying file: lab2_Search.py
+
+It implements:
+- parse_grid(), is_free(), neighbours(), reconstruct_path()  - shared
+  grid utilities implementing T and the path reconstruction step
+- manhattan(), euclidean(), zero_heuristic()                 - heuristic
+  functions used for h(n) in Task 6
+- bfs()   - blind/uninformed search using a FIFO frontier
+- astar() - informed search using a priority queue ordered by
+            f(n) = g(n) + h(n), with a `weight` parameter used only in
+            the Task 6 heuristic experiments
+- report() - prints whether a solution was found, the path, its length,
+  and the number of states expanded
+- the four required test maps from Task 3 (original warehouse, trivial
+  case, no-solution case, alternative-paths map), each run through both
+  BFS and A* for direct comparison
+- Task 6's heuristic investigation, run on the original warehouse map
+  with h(n) = 0, Manhattan distance, Euclidean distance, and 2x
+  Manhattan distance
+
+
+4. PROMPTS USED WITH THE LLM
+-------------------------------
+Initial generation prompt (based on the lab's suggested prompt and my
+own design from Task 1):
+
+  "I am implementing a simple goal-based search agent in Python. The
+  environment is a grid represented by an ASCII map. The agent starts
+  at S and must reach G. The symbols # represent obstacles and .
+  represents free cells. The agent can move up, down, left, or right,
+  and every movement has cost 1. Implement A* search. Use Manhattan
+  distance as the heuristic: h(n) = |x - xG| + |y - yG|. The program
+  should: represent grid positions as states; maintain an appropriate
+  frontier; calculate g(n), h(n) and f(n); avoid repeatedly expanding
+  the same state; reconstruct the path when the goal is reached; report
+  the path and its length; report the number of states expanded. Keep
+  the implementation simple and explain the main components of the
+  code."
+
+Follow-up prompts used while testing and extending the program:
+  - "Also implement BFS on the same grid utilities so I can compare it
+    against A* on the same test maps, reporting the same measures
+    (solution found, path length, states expanded)."
+  - "Add the trivial test case from the lab sheet (goal immediately
+    adjacent to start) and the no-solution test case (goal completely
+    unreachable), and confirm the program reports failure rather than
+    looping on the unreachable one."
+  - "Add a weight parameter to the A* heuristic so I can test h(n)=0,
+    Manhattan distance, Euclidean distance, and 2x Manhattan distance
+    on the warehouse map, and report path length and states expanded
+    for each, for Task 6."
+
+I did not accept the generated code uncritically - I checked each test
+against what it was supposed to demonstrate rather than only checking
+that the program ran without error (see Section 8, reflection
+questions 2-3).
+
+
+5. RESULTS OF THE TESTS
+--------------------------
+
+Test 1: Original warehouse map
+  BFS  - Solution: Yes | Path length: 40 | States expanded: 64
+  A*   - Solution: Yes | Path length: 40 | States expanded: 64
+
+Test 2: Trivial case (#SG##)
+  BFS  - Solution: Yes | Path length: 1  | States expanded: 2
+  A*   - Solution: Yes | Path length: 1  | States expanded: 2
+
+Test 3: No solution (goal unreachable)
+  BFS  - Solution: No  | States expanded: 9
+  A*   - Solution: No  | States expanded: 9
+  (Both algorithms terminated correctly and reported failure, rather
+  than looping indefinitely.)
+
+Test 4: Alternative paths
+  BFS  - Solution: Yes | Path length: 11 | States expanded: 21
+  A*   - Solution: Yes | Path length: 11 | States expanded: 21
+  (Both returned a shortest path.)
+
+
+6. COMPARE A* WITH BLIND SEARCH
+-----------------------------------
+
+                 Measure        BFS    A*
+  Original warehouse map
+                 Solution found  Yes    Yes
+                 Path length     40     40
+                 States expanded 64     64
+
+(a) Did both algorithms find a solution?
+Yes - both found a solution on every test map where one exists (Tests
+1, 2 and 4), and both correctly reported failure on the no-solution map
+(Test 3).
+
+(b) Did they find paths of the same length?
+Yes - identical path lengths in every test. This is expected on a
+unit-cost grid: BFS is guaranteed to return a shortest path (it
+explores level by level), and A* with an admissible heuristic (Manhattan
+distance never overestimates true remaining cost here) is also
+guaranteed to return an optimal/shortest path.
+
+(c) Which algorithm expanded fewer states?
+Neither - on the original warehouse map, BFS and A* expanded exactly
+the same number of states (64).
+
+(d) Why might A* expand fewer states?
+In general, A* uses f(n) = g(n) + h(n) to prioritise states that are
+estimated to lie on a cheaper overall path to the goal, letting it
+avoid expanding states that lead away from the goal once their f(n)
+exceeds the cost of a solution already found. BFS has no notion of
+direction and will expand any state within the eventual path-length
+radius of the start, regardless of whether it moves toward or away
+from the goal.
+
+On this particular map, however, A* showed no advantage. The warehouse
+map is essentially a single, narrow, winding corridor with very few
+points where the robot has a real choice of direction - the walls force
+almost every move. With so little branching, there is nothing for the
+heuristic to usefully prune: both algorithms end up expanding
+essentially the same set of forced-path cells in the same order. A*'s
+advantage over BFS is conditional on a map actually containing
+"wrong-direction" branches that an admissible heuristic can rule out
+early - this map does not have enough of that structure to show it.
+
+
+7. HEURISTIC INVESTIGATION
+-----------------------------
+Run on the original warehouse map, as used throughout the lab.
+
+  Heuristic              Path length   Still optimal?   States expanded
+  h(n) = 0                40            Yes              64
+  Manhattan distance      40            Yes              64
+  Euclidean distance      40            Yes              64
+  2 x Manhattan distance  40            Yes (here)        64
+
+1. What happens if the heuristic is replaced by h(n) = 0?
+A* degenerates into uniform-cost search (equivalent to Dijkstra's
+algorithm on this unit-cost grid). It still finds the optimal path, and
+on this map it expands exactly as many states as the fully-informed
+Manhattan version (64) - because the corridor leaves so little choice
+of direction, having no heuristic at all costs nothing extra here.
+
+2. What happens if the heuristic is replaced by Euclidean distance?
+Euclidean distance is still admissible (it never overestimates true
+grid distance, since diagonal movement is not allowed, so straight-line
+distance is always <= actual path cost). It still finds the optimal
+path, and on this map expands the same number of states as Manhattan
+distance (64) - again because the corridor structure, not the
+heuristic's tightness, is what is controlling the search here.
+
+3. What happens if the heuristic is multiplied by 2?
+2 x Manhattan distance overestimates true remaining cost once the
+multiplier pushes it past the admissibility bound, so A* is no longer
+guaranteed in general to find an optimal path. On this map it still
+found the optimal 40-length path and expanded the same number of states
+as every other heuristic (64) - the single-corridor structure leaves so
+few real choices that even an aggressive, inadmissible heuristic cannot
+change the order of expansion here.
+
+On admissibility (h(n) <= h*(n)):
+h = 0, Manhattan, and Euclidean distance are all admissible, which is
+exactly why all three guaranteed an optimal path. In principle, the
+difference between admissible heuristics should show up as a difference
+in search efficiency (states expanded), and an inadmissible heuristic
+(2x Manhattan) trades that correctness guarantee for potential speed.
+On this specific map none of that shows up as a difference in states
+expanded, because the map's narrow, forced-path structure leaves almost
+no branching for any heuristic - admissible or not - to prune. The
+lesson is that a heuristic's usefulness is conditional on the map
+actually containing search directions worth avoiding; on a map that is
+mostly one enforced corridor, even a "bad" heuristic cannot do much
+damage, and even a "good" one cannot do much good.
+
+
+8. REFLECTION QUESTIONS (TASK 7)
+------------------------------------
+
+1. What parts of the generated code were correct immediately?
+Grid parsing, the BFS implementation, the action/transition logic
+(neighbours()), and path reconstruction all worked correctly on the
+first attempt - largely because I reused and extended the already-
+validated structure from the previous (Lab 1) goal-based agent.
+
+2. Did you find any bugs or design problems?
+No functional bugs in the generated algorithm code. The one thing worth
+flagging is a design limitation rather than a bug: on this particular
+warehouse map, neither the BFS-vs-A* comparison (Task 5) nor the
+heuristic investigation (Task 6) shows any difference in states
+expanded, because the map is almost entirely a single forced corridor.
+The algorithms and heuristics are implemented correctly; the map simply
+does not have enough branching to let their differences show.
+
+3. How did you discover those problems?
+By checking whether each test's results showed the kind of difference
+the task was asking me to investigate, rather than only checking that
+the program ran without error. When BFS and A*, and then all four
+heuristics, kept returning identical states-expanded counts, I worked
+through the map's structure to understand why - a narrow winding
+corridor offers the search almost no real choice of direction at each
+step, which explains the ties.
+
+4. Did the LLM use terminology or data structures that you did not
+understand?
+No - heap-based priority queues (heapq) and dictionary-based came_from
+chains for path reconstruction are standard constructs I was already
+familiar with.
+
+5. Did you modify the LLM-generated code?
+Yes - I added a `weight` parameter to the A* implementation specifically
+to support the Task 6 heuristic experiments (h=0, Manhattan, Euclidean,
+weighted Manhattan).
+
+6. Which tests were most useful?
+Test 3 (no solution) was the most important correctness check, since it
+is the one case where a naive implementation could loop forever instead
+of terminating - both BFS and A* handled it correctly. Beyond
+correctness, re-running Task 6's heuristic comparison on the same map
+used throughout the lab was useful precisely because the result (no
+difference at all) was unexpected and prompted a closer look at why.
+
+7. Could you have trusted the program without testing it?
+No. A program that finds a correct shortest path on one easy map does
+not confirm that the heuristic is admissible, or that a no-solution
+case terminates rather than looping. "Working" and "validated" are not
+the same claim, and Test 3 specifically exists to check something Test
+1 alone cannot.
+
+8. What did you understand about A* that you did not understand before
+implementing it?
+That A*'s advantage over BFS - and the differences between heuristics -
+are conditional on the map actually containing meaningful branching for
+a heuristic to prune. On a narrow, mostly single-corridor map like the
+one used throughout this lab, BFS, A*, and even an inadmissible
+heuristic all expand exactly the same states and find exactly the same
+path, because the walls themselves are already doing almost all of the
+"pruning" that a heuristic would otherwise do.
+
+
+FINAL REFLECTION
+===================
+
+1. Why is it important to formulate the search problem before writing
+the search algorithm?
+Without an explicit (S, A, T, s0, G, c) specification it is easy to
+conflate different notions of "state" (for example, including the
+entire path travelled rather than just the current position) or to
+leave the cost function implicit, either of which can lead to subtly
+wrong or needlessly inefficient implementations that still appear to
+work on simple test cases.
+
+2. In what sense is A* an "informed" search algorithm?
+It uses problem-specific knowledge beyond raw grid connectivity - the
+heuristic h(n), an estimate of remaining cost to the goal - to judge how
+promising a state is before expanding it. This lets it direct the
+search toward the goal rather than exploring outward in all directions
+without regard for progress, as BFS does - though, as this lab's own
+results show, that advantage only materialises when the map actually
+gives the search meaningful choices to prune between.
+
+3. Why does the choice of heuristic matter?
+In general, the heuristic controls the trade-off between search
+efficiency and the guarantee of finding an optimal solution: an
+admissible heuristic always finds an optimal path, while an
+inadmissible, overly aggressive heuristic can expand fewer states at
+the cost of no longer guaranteeing optimality. On the warehouse map
+used in this lab, all four heuristics tested happened to tie exactly -
+a reminder that the heuristic's impact also depends heavily on how much
+real branching the underlying map offers.
+
+4. What did the LLM contribute to the engineering process?
+It accelerated translating an already-designed algorithm into working,
+well-structured Python - correct heap-based frontier management, path
+reconstruction, and a reusable reporting harness - which made it quick
+to run the required comparisons and heuristic variants from Tasks 5 and
+6 and inspect their actual results.
+
+5. What could go wrong if an engineer simply accepted LLM-generated code
+without testing it?
+A plausible-looking shortest path on one easy test map can mask an
+inadmissible heuristic, an off-by-one error in cost accounting, or a
+search that silently fails to terminate on an unreachable goal - exactly
+the class of errors Task 3's structured tests (trivial, no-solution,
+and alternative-paths cases) are specifically designed to catch, and
+exactly the class of error that a single successful run on the main map
+would not reveal.
