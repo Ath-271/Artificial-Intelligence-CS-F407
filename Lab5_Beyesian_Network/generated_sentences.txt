@@ -1,0 +1,20 @@
+<START> the cat sat on the dog ran to the cat sat on the cat sat on the dog ran to
+<START> the dog sat on the mat <END>
+<START> the park <END>
+<START> the dog sat on the rug <END>
+<START> the park <END>
+<START> the cat sat on the cat sat on the mat <END>
+<START> the mat <END>
+<START> the dog sat on the mat <END>
+<START> the rug <END>
+<START> the dog sat on the mat <END>
+<START> the park <END>
+<START> the mat <END>
+<START> the mat <END>
+<START> the mat <END>
+<START> the mat <END>
+<START> the rug <END>
+<START> the cat sat on the cat sat on the park <END>
+<START> the dog ran to the dog sat on the park <END>
+<START> the rug <END>
+<START> the park <END>
